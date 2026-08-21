@@ -179,26 +179,20 @@ async def upload_file(file: UploadFile = File(...)):
     # READ FILE
     # -----------------------------------------------------
 
-    if file.filename.lower().endswith(".csv"):
+    try:
+        if file.filename.lower().endswith(".csv"):
+            df = pd.read_csv(io.BytesIO(content))
+        elif file.filename.lower().endswith((".xlsx", ".xls")):
+            df = pd.read_excel(io.BytesIO(content))
+        else:
+            return {"success": False, "error": "Only CSV and Excel files are supported."}
+    except Exception as e:
+        print(f"[AI-DEBUG] upload_file: parse_error={e} filename={file.filename}")  # [AI-DEBUG] parse failed
+        return {"success": False, "error": f"Failed to parse file: {e}"}
 
-        df = pd.read_csv(
-            io.BytesIO(content)
-        )
-
-    elif file.filename.lower().endswith(
-        (".xlsx", ".xls")
-    ):
-
-        df = pd.read_excel(
-            io.BytesIO(content)
-        )
-
-    else:
-
-        return {
-            "success": False,
-            "error": "Only CSV and Excel files are supported."
-        }
+    if df.empty or len(df.columns) == 0:
+        print(f"[AI-DEBUG] upload_file: empty_df filename={file.filename} shape={df.shape}")  # [AI-DEBUG] empty file
+        return {"success": False, "error": "File has no readable data."}
 
 
     # -----------------------------------------------------
