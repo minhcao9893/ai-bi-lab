@@ -15,4 +15,3 @@ def health():
         "status": "ok",
         "message": "AI-BI Lab is running"
     }
-}
