@@ -254,6 +254,9 @@
                         <tr>
                             <th>Column</th>
                             <th>Data Type</th>
+                            <th>Role</th>
+                            <th>Aggregation</th>
+                            <th>Confidence</th>
                             <th>Missing</th>
                             <th>Missing %</th>
                             <th>Unique</th>
@@ -266,34 +269,47 @@
 
             data.profile.forEach(column => {
 
+                const semantic = column.semantic;
+            
                 html += `
-
+            
                     <tr>
-
+            
                         <td>
-                            ${column.name}
+                            <strong>${column.name}</strong>
                         </td>
-
+            
                         <td>
                             ${column.dtype}
                         </td>
-
+            
+                        <td>
+                            ${semantic.role}
+                        </td>
+            
+                        <td>
+                            ${semantic.aggregation ?? "-"}
+                        </td>
+            
+                        <td>
+                            ${(semantic.confidence * 100).toFixed(0)}%
+                        </td>
+            
                         <td>
                             ${column.missing.toLocaleString()}
                         </td>
-
+            
                         <td>
                             ${column.missing_pct}%
                         </td>
-
+            
                         <td>
                             ${column.unique.toLocaleString()}
                         </td>
-
+            
                     </tr>
-
+            
                 `;
-
             });
 
 
