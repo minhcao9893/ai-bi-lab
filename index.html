@@ -1,20 +1,23 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
     <title>AI-BI Lab</title>
 
     <style>
         body {
             font-family: Arial, sans-serif;
-            max-width: 900px;
-            margin: 60px auto;
+            max-width: 1000px;
+            margin: 50px auto;
             padding: 0 20px;
+            background: #f7f7f7;
         }
 
         h1 {
-            margin-bottom: 10px;
+            margin-bottom: 5px;
         }
 
         .subtitle {
@@ -22,10 +25,79 @@
             margin-bottom: 30px;
         }
 
-        .status {
-            padding: 15px;
-            background: #f3f3f3;
-            border-radius: 8px;
+        .upload-box {
+            background: white;
+            border: 2px dashed #aaa;
+            border-radius: 12px;
+            padding: 50px;
+            text-align: center;
+            cursor: pointer;
+        }
+
+        .upload-box:hover {
+            border-color: #333;
+        }
+
+        input[type="file"] {
+            display: none;
+        }
+
+        button {
+            margin-top: 20px;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 6px;
+            background: #222;
+            color: white;
+            cursor: pointer;
+        }
+
+        button:disabled {
+            background: #aaa;
+        }
+
+        #result {
+            margin-top: 30px;
+        }
+
+        .summary {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .card {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            flex: 1;
+        }
+
+        .card .value {
+            font-size: 28px;
+            font-weight: bold;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            background: white;
+        }
+
+        th,
+        td {
+            padding: 10px;
+            border-bottom: 1px solid #ddd;
+            text-align: left;
+        }
+
+        th {
+            background: #eee;
+        }
+
+        .error {
+            color: #b00020;
+            margin-top: 15px;
         }
     </style>
 </head>
@@ -38,9 +110,207 @@
         Build Your Own AI-powered BI Platform
     </div>
 
-    <div class="status">
-        🚧 M0 — Backend connection test
+    <div class="upload-box" onclick="document.getElementById('fileInput').click()">
+
+        <div style="font-size: 40px;">📁</div>
+
+        <h3>Drop your CSV or Excel file here</h3>
+
+        <p>or click to browse</p>
+
+        <input
+            type="file"
+            id="fileInput"
+            accept=".csv,.xlsx,.xls"
+            onchange="handleFile()"
+        >
+
+        <button
+            id="uploadButton"
+            onclick="event.stopPropagation(); uploadFile()"
+            disabled
+        >
+            Analyze File
+        </button>
+
     </div>
 
+    <div id="status"></div>
+
+    <div id="result"></div>
+
+
+    <script>
+
+        let selectedFile = null;
+
+
+        function handleFile() {
+
+            const input = document.getElementById("fileInput");
+
+            if (input.files.length === 0) {
+                return;
+            }
+
+            selectedFile = input.files[0];
+
+            document.getElementById("uploadButton").disabled = false;
+
+            document.getElementById("status").innerHTML =
+                `<p>Selected: <strong>${selectedFile.name}</strong></p>`;
+        }
+
+
+        async function uploadFile() {
+
+            if (!selectedFile) {
+                return;
+            }
+
+            const button = document.getElementById("uploadButton");
+
+            button.disabled = true;
+            button.innerText = "Analyzing...";
+
+            document.getElementById("result").innerHTML = "";
+
+            const formData = new FormData();
+
+            formData.append("file", selectedFile);
+
+
+            try {
+
+                const response = await fetch("/api/upload", {
+                    method: "POST",
+                    body: formData
+                });
+
+                const data = await response.json();
+
+
+                if (!data.success) {
+
+                    document.getElementById("result").innerHTML =
+                        `<p class="error">${data.error}</p>`;
+
+                    return;
+                }
+
+
+                renderResult(data);
+
+            } catch (error) {
+
+                document.getElementById("result").innerHTML =
+                    `<p class="error">
+                        Failed to upload file.
+                    </p>`;
+
+            } finally {
+
+                button.disabled = false;
+                button.innerText = "Analyze File";
+
+            }
+        }
+
+
+        function renderResult(data) {
+
+            let html = `
+
+                <div class="summary">
+
+                    <div class="card">
+                        <div>File</div>
+                        <div class="value">
+                            ${data.filename}
+                        </div>
+                    </div>
+
+                    <div class="card">
+                        <div>Rows</div>
+                        <div class="value">
+                            ${data.rows.toLocaleString()}
+                        </div>
+                    </div>
+
+                    <div class="card">
+                        <div>Columns</div>
+                        <div class="value">
+                            ${data.columns}
+                        </div>
+                    </div>
+
+                </div>
+
+                <h2>Data Profile</h2>
+
+                <table>
+
+                    <thead>
+                        <tr>
+                            <th>Column</th>
+                            <th>Data Type</th>
+                            <th>Missing</th>
+                            <th>Missing %</th>
+                            <th>Unique</th>
+                        </tr>
+                    </thead>
+
+                    <tbody>
+            `;
+
+
+            data.profile.forEach(column => {
+
+                html += `
+
+                    <tr>
+
+                        <td>
+                            ${column.name}
+                        </td>
+
+                        <td>
+                            ${column.dtype}
+                        </td>
+
+                        <td>
+                            ${column.missing.toLocaleString()}
+                        </td>
+
+                        <td>
+                            ${column.missing_pct}%
+                        </td>
+
+                        <td>
+                            ${column.unique.toLocaleString()}
+                        </td>
+
+                    </tr>
+
+                `;
+
+            });
+
+
+            html += `
+
+                    </tbody>
+
+                </table>
+
+            `;
+
+
+            document.getElementById("result").innerHTML = html;
+        }
+
+    </script>
+
 </body>
+
 </html>
