@@ -25,6 +25,16 @@ async def upload_file(file: UploadFile = File(...)):
     # Read uploaded file into memory
     content = await file.read()
 
+    # Debug uploaded file
+    file_size = len(content)
+
+    print(
+        f"UPLOAD DEBUG | "
+        f"name={file.filename} | "
+        f"size={file_size} | "
+        f"first_bytes={content[:20]}"
+    )
+
     # Detect file type
     if file.filename.lower().endswith(".csv"):
         df = pd.read_csv(io.BytesIO(content))
